@@ -1330,7 +1330,7 @@ window.PROJECTS = [
     const d = db(), unread = new Set(d.messages.filter(m => m.from === "client" && !m.read).map(m => m.phone)).size;
     const need = d.orders.filter(o => NEEDS.includes(o.status)).length;
     const t = [["orders", "الطلبات", need], ["chats", "الرسائل", unread]];
-    return `<nav class="tabs">${t.map(([k, l, n]) => `<a href="#/admin/${k}" ${cur === k ? 'aria-current="page"' : ""}>${l}${n ? `<sup>${n}</sup>` : ""}</a>`).join("")}<a href="#/" data-admin-logout>خروج</a></nav>`;
+    return `<nav class="tabs">${t.map(([k, l, n]) => `<a href="#/admin/${k}" ${cur === k ? 'aria-current="page"' : ""}>${l}${n ? `<sup>${n}</sup>` : ""}</a>`).join("")}<a href="${location.hash}" data-refresh>تحديث</a><a href="#/" data-admin-logout>خروج</a></nav>`;
   }
   const FILTERS = [["need", "يحتاج إجراء"], ["all", "الكل"], ["awaiting_payment", "بانتظار الحوالة"], ["in_progress", "قيد التنفيذ"], ["delivered", "تم التسليم"]];
   function vAdmin(sub, arg) {
@@ -1464,6 +1464,7 @@ window.PROJECTS = [
     if (rm) { const c = cart(); c.splice(+rm.dataset.remove, 1); saveCart(c); route(); return; }
     if (e.target.closest("[data-logout]")) { store.del(K.user); syncBadges(); toast("تم تسجيل الخروج"); route(); return; }
     if (e.target.closest("[data-admin-logout]")) { store.del(K.admin); return; }
+    if (e.target.closest("[data-refresh]")) { e.preventDefault(); route(); toast("تم التحديث"); return; }
     const cp = e.target.closest("[data-copy]");
     if (cp) { (navigator.clipboard ? navigator.clipboard.writeText(cp.dataset.copy) : Promise.reject()).then(() => toast("تم النسخ"), () => toast(cp.dataset.copy)); return; }
     if (e.target.closest("#go-checkout")) {
@@ -1604,7 +1605,12 @@ window.PROJECTS = [
     const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     root.dataset.theme = dark ? "light" : "dark";
   });
-  addEventListener("storage", () => { syncBadges(); if (viewOpen && !document.activeElement.matches("input,textarea,select")) route(); });
+  const refresh = () => { syncBadges(); if (viewOpen && !document.activeElement.matches("input,textarea,select")) route(); };
+  addEventListener("storage", refresh);
+  // الجوال يوقف الصفحات الخلفية؛ نحدّث عند الرجوع للصفحة
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
+  addEventListener("focus", refresh);
+  addEventListener("pageshow", e => { if (e.persisted) refresh(); });
   addEventListener("keydown", e => { if (e.key === "Escape" && viewOpen && !document.activeElement.matches("input,textarea,select")) { const b = $("[data-back]", view); if (b) b.click(); } });
 
   /* ---------- Init ---------- */
